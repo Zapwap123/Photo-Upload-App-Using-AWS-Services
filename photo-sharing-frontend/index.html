@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Photo Sharing App</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f4f6f8;
+      margin: 0;
+      padding: 20px;
+    }
+
+    h1, h2 {
+      text-align: center;
+      color: #333;
+    }
+
+    .upload-card {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      width: 300px;
+      margin: 0 auto 40px;
+      padding: 20px;
+      text-align: center;
+    }
+
+    input[type="file"] {
+      margin-bottom: 10px;
+      display: block;
+      width: 100%;
+    }
+
+    button {
+      background-color: #007bff;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      font-size: 1rem;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #0056b3;
+    }
+
+    #gallery {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 20px;
+    }
+
+    .card {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      width: 180px;
+      text-align: center;
+      overflow: hidden;
+      transition: transform 0.2s ease;
+    }
+
+    .card:hover {
+      transform: scale(1.03);
+    }
+
+    .card img {
+      width: 100%;
+      height: 150px;
+      object-fit: cover;
+    }
+
+    .card p {
+      margin: 10px;
+      font-size: 0.9rem;
+      color: #555;
+      word-break: break-word;
+    }
+
+    .error {
+      text-align: center;
+      color: red;
+    }
+
+    .spinner {
+      display: none;
+      margin: 20px auto;
+      border: 6px solid #f3f3f3;
+      border-top: 6px solid #007bff;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <h1>📷 Photo Sharing App</h1>
+
+  <div class="upload-card">
+    <h3>Upload a New Image</h3>
+    <input type="file" id="uploadFile" />
+    <button onclick="uploadImage()">Upload</button>
+  </div>
+
+  <h2>🖼️ Gallery</h2>
+  <div class="spinner" id="spinner"></div>
+  <div id="gallery"></div>
+
+  <script>
+    const apiEndpoint = "https://1954a7bbn0.execute-api.eu-west-1.amazonaws.com/prod/images";
+
+    async function uploadImage() {
+      const fileInput = document.getElementById("uploadFile");
+      const file = fileInput.files[0];
+
+      if (!file) {
+        alert("Please select a file.");
+        return;
+      }
+
+      const fileName = encodeURIComponent(file.name);
+      const uploadUrl = `https://zeth1-photo-sharing-app-bucket.s3.eu-west-1.amazonaws.com/${fileName}`;
+
+      try {
+        const response = await fetch(uploadUrl, {
+          method: "PUT",
+          body: file,
+        });
+
+        if (response.ok) {
+          alert("Uploaded successfully!");
+          setTimeout(displayImages, 3000);
+        } else {
+          alert("Upload failed.");
+        }
+      } catch (err) {
+        console.error("Upload error:", err);
+        alert("Upload failed due to a network error.");
+      }
+    }
+
+    async function displayImages() {
+      const gallery = document.getElementById("gallery");
+      const spinner = document.getElementById("spinner");
+      gallery.innerHTML = "";
+      spinner.style.display = "block";
+
+      try {
+        const response = await fetch(apiEndpoint);
+        const result = await response.json();
+        const imageUrls = JSON.parse(result.body);
+
+        imageUrls.forEach((url) => {
+          const imageName = url.split('/').pop().replace('thumb-', '');
+          const card = `
+            <div class="card">
+              <img src="${url}" alt="${imageName}" />
+              <p>${imageName}</p>
+            </div>
+          `;
+          gallery.innerHTML += card;
+        });
+      } catch (err) {
+        console.error("Error loading images:", err);
+        gallery.innerHTML = '<p class="error">Could not load images. Try again later.</p>';
+      } finally {
+        spinner.style.display = "none";
+      }
+    }
+
+    displayImages();
+  </script>
+</body>
+</html>
